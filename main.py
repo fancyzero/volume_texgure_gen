@@ -3,8 +3,9 @@ from PIL import Image
 import numpy as np
 
 
-def distance_matrix(m,n):
+def wrap_distance_matrix(m,n):
     d = (np.abs(m[:, np.newaxis] - n))
+    d[d>0.5] = (1-d)[d>0.5]
     d=d*d
     return np.sqrt(d.sum(axis=2))
 
@@ -19,17 +20,13 @@ def distance(p1,p2):
     return np.linalg.norm(m)
 
 
-def nearestn(pt, points):
-    distances=[]
-    for p in points:
-        distances.append(distance(p,pt))
-
-    distances = np.sort(distances)
-    return distances[0]
+def nearestn(pt_index, distance_matrix):
+    return distance_matrix[pt_index][0]
 
 
 def worley_noise(dim, n):
-    q = np.ndarray((dim,dim))
+    q = np.ndarray((dim*dim,2))
+
     t = np.random.rand(n*2)
     t= t.reshape((n,2))
 
@@ -37,14 +34,21 @@ def worley_noise(dim, n):
         for y in range(dim):
             fx = x/float(dim)
             fy = y/float(dim)
-            q[x,y] = (fx,fy)
+            q[x*dim+y] = (fx,fy)
 
-    print (q)
+
+    distances = wrap_distance_matrix(q,t)
+    distances.sort(axis=1)
+
+    q = np.ndarray((dim * dim))
+    for i in range(dim*dim):
+        q[i]=nearestn(i,distances)
+
     q = q/q.max()
     q=1-q
     q*=q
     q = 255*q
-    return q
+    return q.reshape((dim,dim))
 
 
 

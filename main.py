@@ -19,11 +19,6 @@ def distance(p1,p2):
         m[1] = 1 - m[1]
     return np.linalg.norm(m)
 
-
-def nearestn(pt_index, distance_matrix):
-    return distance_matrix[pt_index][0]
-
-
 def worley_noise(size, seed_points):
     q = np.ndarray((size * size, 2))
 
@@ -39,7 +34,7 @@ def worley_noise(size, seed_points):
 
     q = np.ndarray((size * size))
     for i in range(size*size):
-        q[i]=nearestn(i,distances)
+        q[i]=distances[i][0]
     return q.reshape((size, size))
 
 
@@ -59,25 +54,28 @@ def show_image_as_tiled(q):
 
     img2.show()
 
-def fractal_worley(size, octave):
-    base_point_count = int(size //8)
-    q = np.zeros((size, size))
-    max_point_count = base_point_count*np.power(2,octave-1)
-    seed = np.random.rand(max_point_count*2).reshape(max_point_count,2)
-    for i in range(octave):
-        seed_cur = seed[:base_point_count*np.power(2,i)]
-        q += worley_noise(size, seed_cur) * (1.0 / (i + 1))
+def normalize_and_smooth_signal(image):
+    image = image / image.max()
+    image = 1 - np.clip(image * image * (3 - 2 * image), 0, 1)
+    return image
 
-    # normalize everyting out
-    q = q / q.max()
-    q = 1 - q
+def fractal_worley(size, octave, point_count):
+    q = np.zeros((size, size))
+    max_point_count = point_count*np.power(2,octave-1)
+    seed = np.random.rand(max_point_count*2).reshape(max_point_count,2)
+    v = 1
+    for i in range(octave):
+        noise = worley_noise(size, seed[:point_count]) * v
+
+        q += noise
+        point_count *=2
+        v*=1
     return q
 
-worley = fractal_worley(512,1)
-
+worley = fractal_worley(128,6,32)
+worley = normalize_and_smooth_signal(worley)
 #pn = perlin.perlin_noise(128)
-
 #worley *= pn
-worley /= worley.max()
+
 worley *=255
 Image.fromarray(worley).show()

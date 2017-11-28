@@ -9,33 +9,27 @@ def wrap_distance_matrix(m,n):
     d=d*d
     return np.sqrt(d.sum(axis=2))
 
-def distance(p1,p2):
-    p1 = np.array(p1)
-    p2 = np.array(p2)
-    m = np.abs(p1-p2)
-    if m[0] > 0.5:
-        m[0] = 1 - m[0]
-    if m[1] > 0.5:
-        m[1] = 1 - m[1]
-    return np.linalg.norm(m)
+
 
 def worley_noise(size, seed_points):
-    q = np.ndarray((size * size, 2))
+    q = np.ndarray((size * size * size, 3))
 
     for x in range(size):
         for y in range(size):
-            fx = x/float(size)
-            fy = y/float(size)
-            q[x * size + y] = (fx, fy)
+            for z in range(size):
+                fx = x / float(size)
+                fy = y / float(size)
+                fz = z / float(size)
+                q[x * size*size+ y*size + z] = (fx, fy, fz)
 
 
     distances = wrap_distance_matrix(q,seed_points)
     distances.sort(axis=1)
 
-    q = np.ndarray((size * size))
-    for i in range(size*size):
+    q = np.ndarray((size * size * size))
+    for i in range(size*size* size):
         q[i]=distances[i][0]
-    return q.reshape((size, size))
+    return q.reshape((size, size,size))
 
 
 
@@ -60,22 +54,42 @@ def normalize_and_smooth_signal(image):
     return image
 
 def fractal_worley(size, octave, point_count):
-    q = np.zeros((size, size))
+    q = np.zeros((size, size, size))
     max_point_count = point_count*np.power(2,octave-1)
-    seed = np.random.rand(max_point_count*2).reshape(max_point_count,2)
+    seed = np.random.rand(max_point_count*3).reshape(max_point_count,3)
     v = 1
     for i in range(octave):
         noise = worley_noise(size, seed[:point_count]) * v
 
         q += noise
         point_count *=2
-        v*=1
+        v*=0.5
     return q
 
-worley = fractal_worley(128,6,32)
+def paste_array(big, small, top_left,size):
+    print("paste at:",top_left,size)
+    big[top_left[0]:top_left[0]+size[0],top_left[1]:top_left[1]+size[1]] = small
+
+def conv_3dto2d(a3dimgarray,step):
+    z_dim =  a3dimgarray.shape[2]
+    num_slices = z_dim//step
+    slice_per_row = np.ceil(np.sqrt(num_slices))
+    dim = a3dimgarray.shape[0]
+    w = int(slice_per_row)
+    h = int(np.ceil(num_slices/slice_per_row))
+    img = np.ndarray((dim*w,dim*h))
+    img = np.zeros_like(img)
+    for i in range(0,num_slices,step):
+        print("taking slice:",i)
+        paste_array(img,a3dimgarray[i],((i%w)*dim, (i//w)*dim),(32,32))
+    return img
+
+worley = fractal_worley(32,3,32)
 worley = normalize_and_smooth_signal(worley)
 #pn = perlin.perlin_noise(128)
 #worley *= pn
 
 worley *=255
-Image.fromarray(worley).show()
+img = Image.fromarray(conv_3dto2d(worley,1))
+img.show()
+

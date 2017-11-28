@@ -11,4 +11,3 @@ def perlin_noise(size):
     print(q.min())
     return q + 0.5
 
-perlin_noise(512)

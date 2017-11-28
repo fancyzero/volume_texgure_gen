@@ -1,37 +1,32 @@
 import PIL
+import cProfile, pstats, io
 from PIL import Image
 import numpy as np
 import perlin
 
+
+def wraparound(d):
+    d[d > 0.5] = (1 - d)[d > 0.5]
+    return d
+
+def wraparound2(d):
+    return 0.5-np.abs(d-0.5)
+
+
+
 def wrap_distance_matrix(m,n):
     d = (np.abs(m[:, np.newaxis] - n))
-    d[d>0.5] = (1-d)[d > 0.5]
+    d = wraparound2(d)
     d=d*d
     return np.sqrt(d.sum(axis=2))
 
 
 
-def worley_noise(size, seed_points):
-    q = np.ndarray((size * size * size, 3))
-
-    for x in range(size):
-        for y in range(size):
-            for z in range(size):
-                fx = x / float(size)
-                fy = y / float(size)
-                fz = z / float(size)
-                q[x * size*size+ y*size + z] = (fx, fy, fz)
-
-
-    distances = wrap_distance_matrix(q,seed_points)
-    distances.sort(axis=1)
-
-    q = np.ndarray((size * size * size))
-    for i in range(size*size* size):
-        q[i]=distances[i][0]
-    return q.reshape((size, size,size))
-
-
+def worley_noise(size,  seed_points):
+    q = np.moveaxis(np.mgrid[:size, :size, :size], 0, -1)
+    q = q.reshape(size**3,3) / size
+    q = wrap_distance_matrix(q,seed_points).min(axis=1,keepdims=True)
+    return q.reshape((size, size, size))
 
 def show_image_as_tiled(q):
     img = Image.fromarray(q)
@@ -67,7 +62,7 @@ def fractal_worley(size, octave, point_count):
     return q
 
 def paste_array(big, small, top_left,size):
-    print("paste at:",top_left,size)
+    # print("paste at:",top_left,size)
     big[top_left[0]:top_left[0]+size[0],top_left[1]:top_left[1]+size[1]] = small
 
 def conv_3dto2d(a3dimgarray,step):
@@ -80,11 +75,20 @@ def conv_3dto2d(a3dimgarray,step):
     img = np.ndarray((dim*w,dim*h))
     img = np.zeros_like(img)
     for i in range(0,num_slices,step):
-        print("taking slice:",i)
-        paste_array(img,a3dimgarray[i],((i%w)*dim, (i//w)*dim),(32,32))
+        # print("taking slice:",i)
+        paste_array(img,a3dimgarray[i],((i%w)*dim, (i//w)*dim),(dim,dim))
     return img
 
-worley = fractal_worley(32,3,32)
+
+pr = cProfile.Profile()
+pr.enable()
+
+worley = fractal_worley(64,3,32)
+
+pr.disable()
+pr.create_stats()
+pr.print_stats()
+
 worley = normalize_and_smooth_signal(worley)
 #pn = perlin.perlin_noise(128)
 #worley *= pn

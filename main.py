@@ -10,13 +10,12 @@ import perlin
 #     return d
 
 #faster wraparound, 4 time faster
-def wraparound(d):
-    print(d.dtype)
+def wrap_around(d):
     return 0.5-np.abs(d-0.5)
 
 def wrap_distance_matrix(m,n):
     d = np.abs(m[:, np.newaxis] - n)
-    d = wraparound(d)
+    d = wrap_around(d)
     d=d*d
     return np.sqrt(d.sum(axis=2))
 
@@ -38,7 +37,6 @@ def show_image_as_tiled(q):
     img2.paste(img, box=(0, img.height * 2))
     img2.paste(img, box=(img.width, img.height * 2))
     img2.paste(img, box=(img.width * 2, img.height * 2))
-
     img2.show()
 
 def normalize_and_smooth_signal(image):
@@ -53,7 +51,6 @@ def fractal_worley(size, octave, point_count):
     v = 1
     for i in range(octave):
         noise = worley_noise(size, seed[:point_count]) * v
-
         q += noise
         point_count *=2
         v*=0.5
@@ -77,21 +74,25 @@ def conv_3dto2d(a3dimgarray,step):
         paste_array(img,a3dimgarray[i],((i%w)*dim, (i//w)*dim),(dim,dim))
     return img
 
-
+gSize = 64
 pr = cProfile.Profile()
 pr.enable()
 
-worley = fractal_worley(128,3,32)
+worley = fractal_worley(gSize,6,16)
 
 pr.disable()
 pr.create_stats()
 pr.print_stats()
 
 worley = normalize_and_smooth_signal(worley)
-#pn = perlin.perlin_noise(128)
-#worley *= pn
+pn = perlin.perlin_noise(gSize)
+worley *= pn
 
 worley *=255
 img = Image.fromarray(conv_3dto2d(worley,1))
+img = img.convert("RGB")
+f = open("d:\\temp\\volume.bmp","wb")
+img.save(f)
 img.show()
+
 

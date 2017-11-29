@@ -5,25 +5,23 @@ import numpy as np
 import perlin
 
 
-def wraparound(d):
-    d[d > 0.5] = (1 - d)[d > 0.5]
-    return d
+# def wraparound(d):
+#     d[d > 0.5] = (1 - d)[d > 0.5]
+#     return d
 
-def wraparound2(d):
+#faster wraparound, 4 time faster
+def wraparound(d):
+    print(d.dtype)
     return 0.5-np.abs(d-0.5)
 
-
-
 def wrap_distance_matrix(m,n):
-    d = (np.abs(m[:, np.newaxis] - n))
-    d = wraparound2(d)
+    d = np.abs(m[:, np.newaxis] - n)
+    d = wraparound(d)
     d=d*d
     return np.sqrt(d.sum(axis=2))
 
-
-
 def worley_noise(size,  seed_points):
-    q = np.moveaxis(np.mgrid[:size, :size, :size], 0, -1)
+    q = np.moveaxis(np.mgrid[:size, :size, :size].astype(dtype=np.float32), 0, -1)
     q = q.reshape(size**3,3) / size
     q = wrap_distance_matrix(q,seed_points).min(axis=1,keepdims=True)
     return q.reshape((size, size, size))
@@ -49,9 +47,9 @@ def normalize_and_smooth_signal(image):
     return image
 
 def fractal_worley(size, octave, point_count):
-    q = np.zeros((size, size, size))
+    q = np.zeros((size, size, size),dtype=np.float32)
     max_point_count = point_count*np.power(2,octave-1)
-    seed = np.random.rand(max_point_count*3).reshape(max_point_count,3)
+    seed = np.random.rand(max_point_count*3).astype(dtype=np.float32).reshape(max_point_count,3)
     v = 1
     for i in range(octave):
         noise = worley_noise(size, seed[:point_count]) * v
@@ -83,7 +81,7 @@ def conv_3dto2d(a3dimgarray,step):
 pr = cProfile.Profile()
 pr.enable()
 
-worley = fractal_worley(64,3,32)
+worley = fractal_worley(128,3,32)
 
 pr.disable()
 pr.create_stats()
